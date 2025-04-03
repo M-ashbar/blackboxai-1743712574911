@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home | Blog Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js" type="module"></script>
+  <script src="scripts.js" type="module"></script>
+  <style>
+    .blog-card {
+      transition: transform 0.2s ease-in-out;
+    }
+    .blog-card:hover {
+      transform: translateY(-4px);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-gray-900">BlogSite</h1>
+      <div class="flex items-center space-x-4">
+        <a href="dashboard.html" class="text-gray-700 hover:text-gray-900">My Dashboard</a>
+        <button id="sign-out" class="text-gray-500 hover:text-gray-700">
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <h2 class="text-2xl font-bold mb-6">Latest Blog Posts</h2>
+    
+    <div id="loading" class="text-center py-8">
+      <p class="text-gray-500">Loading blogs...</p>
+    </div>
+    
+    <div id="blogs-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Blogs will be loaded here dynamically -->
+    </div>
+    
+    <div id="no-blogs" class="hidden text-center py-8">
+      <p class="text-gray-500">No blogs found. Be the first to create one!</p>
+      <a href="dashboard.html" class="mt-4 inline-block bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+        Create Blog
+      </a>
+    </div>
+  </main>
+
+  <script>
+    import { signOut } from './firebase.js';
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // DOM Elements
+    const loadingEl = document.getElementById('loading');
+    const blogsContainer = document.getElementById('blogs-container');
+    const noBlogsEl = document.getElementById('no-blogs');
+    const signOutBtn = document.getElementById('sign-out');
+
+    // Load all blogs
+    async function loadAllBlogs() {
+      try {
+        const snapshot = await db.collection('blogs')
+          .orderBy('createdAt', 'desc')
+          .get();
+        
+        if (snapshot.empty) {
+          showNoBlogs();
+          return;
+        }
+
+        const blogs = await Promise.all(snapshot.docs.map(async doc => {
+          const blog = doc.data();
+          const author = await getUserName(blog.authorUID);
+          return {
+            id: doc.id,
+            ...blog,
+            author,
+            date: blog.createdAt?.toDate().toLocaleDateString()
+          };
+        }));
+
+        renderBlogs(blogs);
+      } catch (error) {
+        console.error('Error loading blogs:', error);
+        showNoBlogs();
+      }
+    }
+
+    // Get user display name
+    async function getUserName(uid) {
+      try {
+        const doc = await db.collection('users').doc(uid).get();
+        return doc.exists ? doc.data().displayName || 'Anonymous' : 'Anonymous';
+      } catch (error) {
+        return 'Anonymous';
+      }
+    }
+
+    // Render blogs
+    function renderBlogs(blogs) {
+      blogsContainer.innerHTML = blogs.map(blog => `
+        <a href="blog-detail.html?id=${blog.id}" class="blog-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg">
+          <div class="p-6">
+            <h3 class="font-bold text-xl mb-2 line-clamp-2">${blog.title}</h3>
+            <p class="text-gray-600 mb-4 line-clamp-3">${blog.content}</p>
+            <div class="flex items-center text-sm text-gray-500">
+              <span>${blog.author}</span>
+              <span class="mx-2">•</span>
+              <span>${blog.date}</span>
+            </div>
+          </div>
+        </a>
+      `).join('');
+      
+      loadingEl.classList.add('hidden');
+    }
+
+    // Show no blogs message
+    function showNoBlogs() {
+      loadingEl.classList.add('hidden');
+      noBlogsEl.classList.remove('hidden');
+    }
+
+    // Sign out
+    signOutBtn.addEventListener('click', async () => {
+      try {
+        await signOut();
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
+    });
+
+    // Check auth and load blogs
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+      } else {
+        loadAllBlogs();
+      }
+    });
+  </script>
+</body>
+</html>
