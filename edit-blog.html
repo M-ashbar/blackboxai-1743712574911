@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Blog | Blog Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js" type="module"></script>
+  <script src="scripts.js" type="module"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-gray-900">Edit Blog Post</h1>
+      <button id="sign-out" class="text-gray-500 hover:text-gray-700">
+        Sign Out
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <div class="bg-white p-6 rounded-lg shadow">
+      <div id="loading" class="text-center py-8">
+        <p class="text-gray-500">Loading blog post...</p>
+      </div>
+      
+      <form id="edit-blog-form" class="space-y-4 hidden">
+        <div>
+          <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+          <input type="text" id="title" required
+            class="form-input">
+        </div>
+        
+        <div>
+          <label for="content" class="block text-sm font-medium text-gray-700">Content</label>
+          <textarea id="content" rows="10" required
+            class="form-input"></textarea>
+        </div>
+        
+        <div class="flex justify-end space-x-2">
+          <a href="dashboard.html" class="btn-secondary">
+            Cancel
+          </a>
+          <button type="submit" class="btn-primary">
+            Update Blog
+          </button>
+        </div>
+      </form>
+      
+      <div id="not-found" class="hidden text-center py-8">
+        <p class="text-gray-500">Blog post not found or you don't have permission to edit it.</p>
+        <a href="dashboard.html" class="text-blue-600 hover:text-blue-800 mt-2 inline-block">Back to Dashboard</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    import { getBlog, updateBlog, signOut } from './firebase.js';
+    const auth = firebase.auth();
+
+    // DOM Elements
+    const loadingEl = document.getElementById('loading');
+    const editForm = document.getElementById('edit-blog-form');
+    const notFoundEl = document.getElementById('not-found');
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const signOutBtn = document.getElementById('sign-out');
+
+    // Get blog ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const blogId = urlParams.get('id');
+
+    // Load blog for editing
+    async function loadBlogForEditing() {
+      try {
+        const blog = await getBlog(blogId);
+        
+        if (blog && blog.authorUID === auth.currentUser?.uid) {
+          titleInput.value = blog.title;
+          contentInput.value = blog.content;
+          loadingEl.classList.add('hidden');
+          editForm.classList.remove('hidden');
+        } else {
+          showNotFound();
+        }
+      } catch (error) {
+        console.error('Error loading blog:', error);
+        showNotFound();
+      }
+    }
+
+    // Handle form submission
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const result = await updateBlog(blogId, {
+          title: titleInput.value,
+          content: contentInput.value
+        });
+        
+        if (result.success) {
+          window.location.href = 'blog-detail.html?id=' + blogId;
+        }
+      } catch (error) {
+        console.error('Error updating blog:', error);
+      }
+    });
+
+    // Show not found message
+    function showNotFound() {
+      loadingEl.classList.add('hidden');
+      notFoundEl.classList.remove('hidden');
+    }
+
+    // Sign out
+    signOutBtn.addEventListener('click', async () => {
+      try {
+        await signOut();
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
+    });
+
+    // Check auth and load blog
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = 'login.html';
+      } else if (blogId) {
+        loadBlogForEditing();
+      } else {
+        showNotFound();
+      }
+    });
+  </script>
+</body>
+</html>
