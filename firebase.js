@@ -1,12 +1,13 @@
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDummyKey-1234567890",
-  authDomain: "blog-website-12345.firebaseapp.com",
-  projectId: "blog-website-12345",
-  storageBucket: "blog-website-12345.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abc123def456"
-};
+    apiKey: "AIzaSyClfB2Dv6dje-1sntW6p3z2DzP75Hg0Phc",
+    authDomain: "hackaton1-9d57f.firebaseapp.com",
+    projectId: "hackaton1-9d57f",
+    storageBucket: "hackaton1-9d57f.firebasestorage.app",
+    messagingSenderId: "233682521253",
+    appId: "1:233682521253:web:4495bf46dd90c899a7114c",
+    measurementId: "G-C3HSTT908W"
+  };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
